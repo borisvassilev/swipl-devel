@@ -432,6 +432,19 @@ A pushVolatileAtom() is not needed as this   protection only needs to be
 effective after the next GC call and GC won't run concurrently with AGC.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
+static int
+check_pdelim(LocalFrame fr)
+{ for( ; fr; fr = fr->parent )
+  { if ( strcmp(predicateName(fr->predicate), "$tabling:pdelim/3") == 0 )
+    { Sdprintf("Restored choice point in pdelim/3\n");
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
+
 Code
 push_continuation(term_t continuation, LocalFrame pfr, Code pcret ARG_LD)
 { LocalFrame top, fr;
@@ -499,7 +512,16 @@ retry:
 	{ *ap = ichp;
 
 	  DEBUG(MSG_CONTINUE,
-		Sdprintf("Restored choicepoint for slot %d\n", ichp));
+		Sdprintf("Restored choicepoint for slot %d\n", i));
+
+	  if ( check_pdelim(environment_frame) )
+	    Sdprintf("Restored choicepoint for slot %d in clause %d of %s at PC=%ld\n",
+		     i,
+		     clauseNo(cl, 0),
+		     predicateName(cl->predicate),
+		     pcoffset);
+
+	  *ap = consTermRef(LD->choicepoints);
 	} else
 	{ *ap = consTermRef(LD->choicepoints);
 	}
